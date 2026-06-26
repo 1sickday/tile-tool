@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TILE TOOL v1.0</title>
+<style>
+:root{
+  --bg: #000000;
+  --panel: #0d0d0d;
+  --panel-alt: #161616;
+  --border: #333333;
+  --text: #ffffff;
+  --text-dim: #8a8a8a;
+  --accent: #ffffff;
+  --accent-dim: rgba(255,255,255,0.12);
+  --font: "Neue Haas Grotesk Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+*{ box-sizing: border-box; }
+html,body{ margin:0; height:100%; background:var(--bg); color:var(--text); font-family:var(--font); }
+
+.app{ display:flex; height:100vh; overflow:hidden; }
+
+/* ---------- PANEL ---------- */
+.panel{ width:340px; min-width:340px; background:var(--panel); border-right:1px solid var(--border);
+  overflow-y:auto; padding:20px 18px 32px; display:flex; flex-direction:column; gap:22px; }
+
+.brand{ display:flex; flex-direction:column; gap:2px; margin-bottom:4px; }
+.brand .title{ font-family:var(--font); font-weight:700; font-size:19px; letter-spacing:-0.01em; }
+.brand .sub{ font-size:10.5px; color:var(--text-dim); letter-spacing:0.04em; }
+
+.section{ display:flex; flex-direction:column; gap:12px; }
+.section-head{ display:flex; align-items:baseline; gap:8px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.section-num{ color:var(--accent); font-size:11px; font-weight:700; letter-spacing:0.05em; }
+.section-name{ font-family:var(--font); font-size:12.5px; font-weight:700; letter-spacing:0.06em; color:var(--text); }
+
+.dropzone{ border:1px dashed var(--border); border-radius:2px; padding:18px 10px; text-align:center;
+  cursor:pointer; transition:border-color .15s, background .15s; display:flex; flex-direction:column; gap:4px; }
+.dropzone:hover, .dropzone.drag{ border-color:var(--accent); background:var(--accent-dim); }
+.dz-label{ font-size:11px; letter-spacing:0.06em; color:var(--text); }
+.dz-sub{ font-size:10px; color:var(--text-dim); }
+.filename{ font-size:10px; color:var(--accent); word-break:break-all; }
+
+.control{ display:flex; flex-direction:column; gap:6px; }
+.control-row{ display:flex; justify-content:space-between; align-items:baseline; }
+.control label{ font-size:10.5px; letter-spacing:0.05em; color:var(--text-dim); }
+.control .value{ font-size:11px; color:var(--accent); font-weight:700; min-width:34px; text-align:right; }
+
+input[type="range"]{ width:100%; -webkit-appearance:none; appearance:none; height:2px; background:var(--border);
+  outline:none; cursor:pointer; }
+input[type="range"]::-webkit-slider-thumb{ -webkit-appearance:none; width:12px; height:12px; border-radius:50%;
+  background:var(--accent); cursor:pointer; border:2px solid var(--bg); margin-top:0; }
+input[type="range"]::-moz-range-thumb{ width:12px; height:12px; border-radius:50%; background:var(--accent);
+  cursor:pointer; border:2px solid var(--bg); }
+input[type="range"]:disabled{ opacity:0.35; cursor:not-allowed; }
+
+.range-bounds{ display:flex; justify-content:space-between; font-size:9px; color:var(--text-dim); margin-top:-2px; }
+
+.checkrow{ display:flex; align-items:center; gap:8px; }
+.checkrow input[type="checkbox"]{ accent-color: var(--accent); width:13px; height:13px; cursor:pointer; }
+.checkrow label{ font-size:10.5px; letter-spacing:0.04em; color:var(--text-dim); cursor:pointer; }
+
+.colorgrid{ display:flex; gap:10px; }
+.colorfield{ display:flex; flex-direction:column; gap:6px; align-items:center; flex:1; }
+.colorfield label{ font-size:9.5px; letter-spacing:0.04em; color:var(--text-dim); }
+input[type="color"]{ width:100%; height:30px; border:1px solid var(--border); border-radius:2px; background:var(--panel-alt);
+  cursor:pointer; padding:2px; }
+
+.stat-row{ display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); }
+.stat-row .stat-val{ color:var(--text); font-weight:700; }
+
+.btn{ font-family:var(--font); font-size:11px; letter-spacing:0.06em; font-weight:700;
+  background:transparent; border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:2px;
+  cursor:pointer; transition:border-color .15s, color .15s, background .15s; text-transform:uppercase; }
+.btn:hover:not(:disabled){ border-color:var(--accent); color:var(--accent); }
+.btn:disabled{ opacity:0.35; cursor:not-allowed; }
+.btn-primary{ background:var(--accent); color:#000000; border-color:var(--accent); }
+.btn-primary:hover:not(:disabled){ background:var(--accent); color:#000000; opacity:0.85; }
+.btnrow{ display:flex; gap:8px; }
+.btnrow .btn{ flex:1; }
+
+.progress-track{ height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+.progress-fill{ height:100%; width:0%; background:var(--accent); border-radius:2px; transition:width .08s linear; }
+.progress-label{ font-size:9.5px; color:var(--text-dim); text-align:center; letter-spacing:0.04em; }
+
+.res-btns{ display:flex; gap:4px; }
+.res-btn{ flex:1; font-family:var(--font); font-size:10px; letter-spacing:0.05em; font-weight:700;
+  background:transparent; border:1px solid var(--border); color:var(--text-dim); padding:7px 2px;
+  border-radius:2px; cursor:pointer; transition:border-color .15s, color .15s, background .15s; text-transform:uppercase; }
+.res-btn:hover{ border-color:var(--accent); color:var(--accent); }
+.res-btn.active{ border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+
+.footnote{ font-size:9.5px; color:var(--text-dim); line-height:1.5; margin-top:auto; padding-top:10px;
+  border-top:1px solid var(--border); }
+
+/* ---------- STAGE ---------- */
+.stage{ flex:1; display:flex; flex-direction:column; min-width:0; }
+
+.steps-strip{ display:flex; gap:1px; background:var(--border); border-bottom:1px solid var(--border); }
+.step{ flex:1; background:var(--panel); padding:8px 10px 10px; display:flex; flex-direction:column; gap:6px; }
+.step-label{ font-size:9.5px; letter-spacing:0.06em; color:var(--text-dim); }
+.step-label b{ color:var(--accent); }
+.step canvas{ width:100%; height:78px; object-fit:contain; background:#000000; display:block; border:1px solid var(--border); }
+
+.canvas-wrap{ flex:1; display:flex; align-items:center; justify-content:center; position:relative; padding:30px;
+  background: radial-gradient(circle at 50% 40%, #121212 0%, #000000 100%); overflow:auto; }
+
+#finalCanvas{ max-width:100%; max-height:100%; box-shadow:0 0 0 1px var(--border); image-rendering:pixelated; }
+
+.empty-state{ position:absolute; display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--text-dim);
+  font-size:11px; letter-spacing:0.04em; text-align:center; }
+.empty-state .big{ font-family:var(--font); font-size:14px; color:var(--text); font-weight:700; }
+
+.processing-badge{ position:absolute; top:14px; right:14px; background:var(--accent); color:#000000; font-size:10px;
+  font-weight:700; letter-spacing:0.06em; padding:5px 10px; border-radius:2px; display:none; }
+
+@media (max-width: 880px){
+  .app{ flex-direction:column; }
+  .panel{ width:100%; min-width:0; max-height:46vh; border-right:none; border-bottom:1px solid var(--border); }
+  .steps-strip{ display:none; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="panel" id="panel">
+    <div class="brand">
+      <div class="title">TILE TOOL</div>
+      <div class="sub">TEST VERSION 1.0</div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span class="section-num">01</span><span class="section-name">UPLOAD</span></div>
+      <div class="dropzone" id="dropzone">
+        <span class="dz-label">DROP IMAGE OR VIDEO HERE</span>
+        <span class="dz-sub">or click to browse</span>
+        <span class="filename" id="filenameLabel"></span>
+      </div>
+      <input type="file" id="fileInput" accept="image/*,video/*" hidden>
+    </div>
+
+    <div class="section" id="videoSection" style="display:none">
+      <div class="section-head"><span class="section-num">V</span><span class="section-name">VIDEO</span></div>
+      <div class="stat-row"><span>DURATION</span><span class="stat-val" id="videoDurationEl">—</span></div>
+      <div class="stat-row"><span>EST. FRAMES</span><span class="stat-val" id="videoFramesEl">—</span></div>
+      <div class="control">
+        <div class="control-row"><label for="fpsSlider">OUTPUT FPS</label><span class="value" id="fpsValue">12</span></div>
+        <input type="range" id="fpsSlider" min="1" max="30" value="12">
+      </div>
+      <button class="btn btn-primary" id="renderVideoBtn">RENDER VIDEO</button>
+      <div id="progressWrap" style="display:none; gap:6px; flex-direction:column; display:none">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-label" id="progressLabel"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span class="section-num">02</span><span class="section-name">THRESHOLD</span></div>
+      <div class="control">
+        <div class="control-row"><label for="thresholdSlider">CUTOFF</label><span class="value" id="thresholdValue">128</span></div>
+        <input type="range" id="thresholdSlider" min="0" max="255" value="128" disabled>
+      </div>
+      <div class="checkrow">
+        <input type="checkbox" id="invertCheck">
+        <label for="invertCheck">INVERT (LIGHT = FOREGROUND)</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span class="section-num">03</span><span class="section-name">MOSAIC GRID</span></div>
+      <div class="control">
+        <div class="control-row"><label for="mosaicSlider">CELL SIZE (PX)</label><span class="value" id="mosaicValue">—</span></div>
+        <input type="range" id="mosaicSlider" min="2" max="40" value="10" disabled>
+        <div class="range-bounds"><span id="mosaicMinLabel">finer</span><span id="mosaicMaxLabel">coarser</span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span class="section-num">04</span><span class="section-name">TILE FILL</span></div>
+      <div class="control">
+        <div class="control-row"><label for="circleSlider">CIRCLE SIZE</label><span class="value" id="circleValue">78%</span></div>
+        <input type="range" id="circleSlider" min="10" max="98" value="78" disabled>
+      </div>
+      <div class="control">
+        <div class="control-row"><label for="gapSlider">TILE GAP</label><span class="value" id="gapValue">0%</span></div>
+        <input type="range" id="gapSlider" min="0" max="50" value="0" disabled>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span class="section-num">05</span><span class="section-name">COLOR</span></div>
+      <div class="colorgrid">
+        <div class="colorfield"><label>TILE</label><input type="color" id="tileColorInput" value="#000000" disabled></div>
+        <div class="colorfield"><label>CIRCLE</label><input type="color" id="circleColorInput" value="#ffffff" disabled></div>
+        <div class="colorfield"><label>BG</label><input type="color" id="bgColorInput" value="#ffffff" disabled></div>
+      </div>
+      <div class="checkrow">
+        <input type="checkbox" id="transparentCheck">
+        <label for="transparentCheck">TRANSPARENT BACKGROUND</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><span class="section-num">06</span><span class="section-name">EXPORT</span></div>
+      <div class="control">
+        <div class="control-row"><label>RESOLUTION</label><span class="value" style="font-size:9px;font-weight:400;color:var(--text-dim)" id="exportSizeEl">—</span></div>
+        <div class="res-btns" id="resGroup">
+          <button class="res-btn active" data-res="0">AUTO</button>
+          <button class="res-btn" data-res="1920">HD</button>
+          <button class="res-btn" data-res="2560">2K</button>
+          <button class="res-btn" data-res="3840">4K</button>
+          <button class="res-btn" data-res="7680">8K</button>
+        </div>
+      </div>
+      <div class="stat-row"><span>TILES PLACED</span><span class="stat-val" id="tileCountEl">—</span></div>
+      <div class="stat-row"><span>GRID</span><span class="stat-val" id="gridSizeEl">—</span></div>
+      <div class="btnrow">
+        <button class="btn btn-primary" id="downloadPngBtn" disabled>PNG</button>
+        <button class="btn btn-primary" id="downloadSvgBtn" disabled>SVG</button>
+        <button class="btn btn-primary" id="downloadWebmBtn" disabled>WEBM</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <div class="steps-strip">
+      <div class="step"><div class="step-label"><b>01</b> SOURCE</div><canvas id="thumbSource" width="220" height="78"></canvas></div>
+      <div class="step"><div class="step-label"><b>02</b> THRESHOLD</div><canvas id="thumbThresh" width="220" height="78"></canvas></div>
+      <div class="step"><div class="step-label"><b>03</b> MOSAIC</div><canvas id="thumbMosaic" width="220" height="78"></canvas></div>
+      <div class="step"><div class="step-label"><b>04</b> TILED</div><canvas id="thumbFinal" width="220" height="78"></canvas></div>
+    </div>
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="finalCanvas"></canvas>
+      <div class="empty-state" id="emptyState">
+        <span class="big">DROP IMAGE OR VIDEO HERE</span>
+        <span>Runs locally, nothing is uploaded</span>
+      </div>
+      <div class="processing-badge" id="processingBadge">PROCESSING</div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- DOM ----------
+  const panel = document.getElementById('panel');
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const filenameLabel = document.getElementById('filenameLabel');
+  const canvasWrap = document.getElementById('canvasWrap');
+  const emptyState = document.getElementById('emptyState');
+  const processingBadge = document.getElementById('processingBadge');
+  const finalCanvas = document.getElementById('finalCanvas');
+
+  const thresholdSlider = document.getElementById('thresholdSlider');
+  const thresholdValue = document.getElementById('thresholdValue');
+  const invertCheck = document.getElementById('invertCheck');
+
+  const mosaicSlider = document.getElementById('mosaicSlider');
+  const mosaicValue = document.getElementById('mosaicValue');
+  const mosaicMinLabel = document.getElementById('mosaicMinLabel');
+  const mosaicMaxLabel = document.getElementById('mosaicMaxLabel');
+
+  const circleSlider = document.getElementById('circleSlider');
+  const circleValue = document.getElementById('circleValue');
+  const gapSlider = document.getElementById('gapSlider');
+  const gapValue = document.getElementById('gapValue');
+
+  const tileColorInput = document.getElementById('tileColorInput');
+  const circleColorInput = document.getElementById('circleColorInput');
+  const bgColorInput = document.getElementById('bgColorInput');
+  const transparentCheck = document.getElementById('transparentCheck');
+
+  const tileCountEl = document.getElementById('tileCountEl');
+  const gridSizeEl = document.getElementById('gridSizeEl');
+  const exportSizeEl = document.getElementById('exportSizeEl');
+  const resGroup = document.getElementById('resGroup');
+  const downloadPngBtn = document.getElementById('downloadPngBtn');
+  const downloadSvgBtn = document.getElementById('downloadSvgBtn');
+  const downloadWebmBtn = document.getElementById('downloadWebmBtn');
+
+  const thumbSource = document.getElementById('thumbSource');
+  const thumbThresh = document.getElementById('thumbThresh');
+  const thumbMosaic = document.getElementById('thumbMosaic');
+  const thumbFinal = document.getElementById('thumbFinal');
+
+  // Video section DOM
+  const videoSection = document.getElementById('videoSection');
+  const videoDurationEl = document.getElementById('videoDurationEl');
+  const videoFramesEl = document.getElementById('videoFramesEl');
+  const fpsSlider = document.getElementById('fpsSlider');
+  const fpsValue = document.getElementById('fpsValue');
+  const renderVideoBtn = document.getElementById('renderVideoBtn');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressLabel = document.getElementById('progressLabel');
+
+  const sourceCanvas = document.createElement('canvas');
+  const threshCanvas = document.createElement('canvas');
+  const mosaicCanvas = document.createElement('canvas');
+
+  const allControls = [thresholdSlider, invertCheck, mosaicSlider, circleSlider, gapSlider,
+    tileColorInput, circleColorInput, bgColorInput, transparentCheck];
+
+  const state = { luma:null, w:0, h:0, tiles:null, gridW:0, gridH:0, cellSize:0, gapPx:0, circleRatio:0.78 };
+
+  // Video state
+  const vstate = {
+    mode: 'image',
+    videoEl: null,
+    duration: 0,
+    renderedFrames: [], // each entry: { tiles, gridW, gridH, cellSize, preview: dataURL }
+    previewRAF: null,
+    isRendering: false,
+  };
+
+  // Export resolution
+  let exportTargetLong = 0; // 0 = auto (current render resolution)
+
+  function getExportScale(){
+    if (!exportTargetLong || !state.gridW) return 1;
+    const currentLong = Math.max(state.gridW, state.gridH) * state.cellSize;
+    return exportTargetLong / currentLong;
+  }
+
+  function updateExportSizeLabel(){
+    if (!state.gridW){ exportSizeEl.textContent = '—'; return; }
+    const s = getExportScale();
+    const w = Math.round(state.gridW * state.cellSize * s);
+    const h = Math.round(state.gridH * state.cellSize * s);
+    exportSizeEl.textContent = w.toLocaleString() + ' × ' + h.toLocaleString() + ' px';
+  }
+
+  // ---------- IMAGE PIPELINE ----------
+  function toLuma(imageData){
+    const data = imageData.data;
+    const n = imageData.width * imageData.height;
+    const luma = new Uint8ClampedArray(n);
+    for (let i = 0, p = 0; i < data.length; i += 4, p++){
+      luma[p] = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+    }
+    return luma;
+  }
+
+  function buildBinary(luma, w, h, threshold, invert){
+    const bin = new Uint8Array(w*h);
+    for (let i = 0; i < w*h; i++){
+      const isDark = luma[i] < threshold;
+      bin[i] = invert ? (isDark ? 0 : 1) : (isDark ? 1 : 0);
+    }
+    return bin;
+  }
+
+  function buildGrid(bin, w, h, cellSize){
+    const gridW = Math.ceil(w/cellSize);
+    const gridH = Math.ceil(h/cellSize);
+    const grid = new Uint8Array(gridW*gridH);
+    for (let gr = 0; gr < gridH; gr++){
+      const y0 = gr*cellSize, y1 = Math.min(h, y0+cellSize);
+      for (let gc = 0; gc < gridW; gc++){
+        const x0 = gc*cellSize, x1 = Math.min(w, x0+cellSize);
+        let sum = 0, count = 0;
+        for (let y = y0; y < y1; y++){
+          const rowOff = y*w;
+          for (let x = x0; x < x1; x++){ sum += bin[rowOff+x]; count++; }
+        }
+        grid[gr*gridW+gc] = (count > 0 && (sum/count) >= 0.5) ? 1 : 0;
+      }
+    }
+    return { grid, gridW, gridH };
+  }
+
+  // Greedy maximal-square packing: repeatedly fills the largest available
+  // square(s) of foreground cells, then recomputes on what's left.
+  function packTiles(grid, gridW, gridH){
+    const active = Uint8Array.from(grid);
+    const dp = new Int32Array(gridW*gridH);
+    const tiles = [];
+    const idx = (r,c) => r*gridW + c;
+
+    while (true){
+      let maxVal = 0;
+      for (let r = 0; r < gridH; r++){
+        for (let c = 0; c < gridW; c++){
+          const i = idx(r,c);
+          if (!active[i]){ dp[i] = 0; continue; }
+          if (r === 0 || c === 0){ dp[i] = 1; }
+          else {
+            const up = dp[idx(r-1,c)], left = dp[idx(r,c-1)], diag = dp[idx(r-1,c-1)];
+            dp[i] = Math.min(up, left, diag) + 1;
+          }
+          if (dp[i] > maxVal) maxVal = dp[i];
+        }
+      }
+      if (maxVal === 0) break;
+
+      const claimed = new Uint8Array(gridW*gridH);
+      for (let r = 0; r < gridH; r++){
+        for (let c = 0; c < gridW; c++){
+          const i = idx(r,c);
+          if (dp[i] !== maxVal) continue;
+          const size = maxVal;
+          const r0 = r - size + 1, c0 = c - size + 1;
+          let ok = true;
+          for (let rr = r0; rr <= r && ok; rr++){
+            for (let cc = c0; cc <= c; cc++){
+              if (claimed[idx(rr,cc)]){ ok = false; break; }
+            }
+          }
+          if (!ok) continue;
+          for (let rr = r0; rr <= r; rr++){
+            for (let cc = c0; cc <= c; cc++){ claimed[idx(rr,cc)] = 1; }
+          }
+          tiles.push({ r:r0, c:c0, size });
+        }
+      }
+      for (let i = 0; i < claimed.length; i++){ if (claimed[i]) active[i] = 0; }
+    }
+    return tiles;
+  }
+
+  // ---------- RENDERING ----------
+  function drawBinaryToCanvas(bin, w, h, canvas){
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(w, h);
+    for (let i = 0; i < w*h; i++){
+      const v = bin[i] ? 0 : 255;
+      imgData.data[i*4] = v; imgData.data[i*4+1] = v; imgData.data[i*4+2] = v; imgData.data[i*4+3] = 255;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  function drawMosaicToCanvas(grid, gridW, gridH, cellSize, canvas){
+    const W = gridW*cellSize, H = gridH*cellSize;
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#000000';
+    for (let r = 0; r < gridH; r++){
+      for (let c = 0; c < gridW; c++){
+        if (grid[r*gridW+c]) ctx.fillRect(c*cellSize, r*cellSize, cellSize, cellSize);
+      }
+    }
+  }
+
+  function renderTilesToCanvas(canvas, tiles, cellPx, gapPx, circleRatio, tileColor, circleColor, bgColor, gridW, gridH){
+    const W = gridW*cellPx, H = gridH*cellPx;
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,W,H);
+    if (bgColor){ ctx.fillStyle = bgColor; ctx.fillRect(0,0,W,H); }
+    for (const t of tiles){
+      const x = t.c*cellPx + gapPx/2;
+      const y = t.r*cellPx + gapPx/2;
+      const s = t.size*cellPx - gapPx;
+      if (s <= 0) continue;
+      ctx.fillStyle = tileColor;
+      ctx.fillRect(x, y, s, s);
+      const d = s*circleRatio;
+      if (d > 0){
+        ctx.fillStyle = circleColor;
+        ctx.beginPath();
+        ctx.arc(x + s/2, y + s/2, d/2, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+
+  function tilesToSVG(tiles, cellPx, gapPx, circleRatio, tileColor, circleColor, bgColor, gridW, gridH){
+    const W = gridW*cellPx, H = gridH*cellPx;
+    let body = '';
+    if (bgColor) body += `<rect x="0" y="0" width="${W}" height="${H}" fill="${bgColor}"/>`;
+    for (const t of tiles){
+      const x = t.c*cellPx + gapPx/2;
+      const y = t.r*cellPx + gapPx/2;
+      const s = t.size*cellPx - gapPx;
+      if (s <= 0) continue;
+      const d = s*circleRatio;
+      const cx = x + s/2, cy = y + s/2;
+      body += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${s.toFixed(2)}" height="${s.toFixed(2)}" fill="${tileColor}"/>`;
+      if (d > 0) body += `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(d/2).toFixed(2)}" fill="${circleColor}"/>`;
+    }
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${body}</svg>`;
+  }
+
+  function fitDraw(srcCanvas, destCanvas){
+    const ctx = destCanvas.getContext('2d');
+    const maxW = destCanvas.width, maxH = destCanvas.height;
+    ctx.fillStyle = '#000000'; ctx.fillRect(0,0,maxW,maxH);
+    if (!srcCanvas.width || !srcCanvas.height) return;
+    const scale = Math.min(maxW/srcCanvas.width, maxH/srcCanvas.height);
+    const dw = srcCanvas.width*scale, dh = srcCanvas.height*scale;
+    ctx.drawImage(srcCanvas, (maxW-dw)/2, (maxH-dh)/2, dw, dh);
+  }
+
+  // ---------- PIPELINE ORCHESTRATION ----------
+  let recomputeTimer = null;
+  function scheduleRecompute(){
+    if (!state.luma) return;
+    stopPreview();
+    if (vstate.mode === 'video' && vstate.renderedFrames.length > 0){
+      vstate.renderedFrames = [];
+      downloadWebmBtn.disabled = true;
+    }
+    processingBadge.style.display = 'block';
+    clearTimeout(recomputeTimer);
+    recomputeTimer = setTimeout(() => {
+      requestAnimationFrame(() => {
+        recomputeAndRender();
+        processingBadge.style.display = 'none';
+      });
+    }, 160);
+  }
+
+  function recomputeAndRender(){
+    const { w, h, luma } = state;
+    const threshold = +thresholdSlider.value;
+    const invert = invertCheck.checked;
+    const bin = buildBinary(luma, w, h, threshold, invert);
+    drawBinaryToCanvas(bin, w, h, threshCanvas);
+
+    const cellSize = +mosaicSlider.value;
+    const { grid, gridW, gridH } = buildGrid(bin, w, h, cellSize);
+    drawMosaicToCanvas(grid, gridW, gridH, cellSize, mosaicCanvas);
+
+    const tiles = packTiles(grid, gridW, gridH);
+
+    const gapPx = cellSize * (+gapSlider.value/100);
+    const circleRatio = +circleSlider.value/100;
+    const tileColor = tileColorInput.value;
+    const circleColor = circleColorInput.value;
+    const bgColor = transparentCheck.checked ? null : bgColorInput.value;
+
+    renderTilesToCanvas(finalCanvas, tiles, cellSize, gapPx, circleRatio, tileColor, circleColor, bgColor, gridW, gridH);
+
+    Object.assign(state, { tiles, gridW, gridH, cellSize, gapPx, circleRatio, tileColor, circleColor, bgColor });
+
+    tileCountEl.textContent = tiles.length.toLocaleString();
+    gridSizeEl.textContent = gridW + ' × ' + gridH;
+
+    fitDraw(sourceCanvas, thumbSource);
+    fitDraw(threshCanvas, thumbThresh);
+    fitDraw(mosaicCanvas, thumbMosaic);
+    fitDraw(finalCanvas, thumbFinal);
+
+    downloadPngBtn.disabled = vstate.mode !== 'image';
+    downloadSvgBtn.disabled = vstate.mode !== 'image';
+
+    updateExportSizeLabel();
+  }
+
+  // ---------- IMAGE LOAD ----------
+  function handleImageFile(file){
+    vstate.mode = 'image';
+    stopPreview();
+    vstate.renderedFrames = [];
+    videoSection.style.display = 'none';
+    downloadWebmBtn.disabled = true;
+    filenameLabel.textContent = file.name;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); initFromImage(img); };
+    img.src = url;
+  }
+
+  function initFromImage(img){
+    const maxDim = 900;
+    const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * scale));
+    const h = Math.max(1, Math.round(img.naturalHeight * scale));
+
+    sourceCanvas.width = w; sourceCanvas.height = h;
+    const sctx = sourceCanvas.getContext('2d');
+    sctx.drawImage(img, 0, 0, w, h);
+    const imageData = sctx.getImageData(0, 0, w, h);
+
+    state.luma = toLuma(imageData);
+    state.w = w; state.h = h;
+
+    setMosaicRange(w, h);
+    emptyState.style.display = 'none';
+    allControls.forEach(el => el.disabled = false);
+    scheduleRecompute();
+  }
+
+  function setMosaicRange(w, h){
+    const maxCells = 45000;
+    const minCell = Math.max(2, Math.ceil(Math.sqrt((w*h)/maxCells)));
+    const maxCell = Math.max(minCell + 1, Math.floor(Math.min(w,h)/6));
+    mosaicSlider.min = minCell;
+    mosaicSlider.max = maxCell;
+    mosaicSlider.value = Math.min(maxCell, Math.max(minCell, Math.round(Math.min(w,h)/30)));
+    mosaicMinLabel.textContent = 'finer (' + minCell + 'px)';
+    mosaicMaxLabel.textContent = 'coarser (' + maxCell + 'px)';
+    mosaicValue.textContent = mosaicSlider.value;
+  }
+
+  // ---------- VIDEO LOAD ----------
+  async function handleVideoFile(file){
+    vstate.mode = 'video';
+    stopPreview();
+    vstate.renderedFrames = [];
+    downloadWebmBtn.disabled = true;
+    downloadPngBtn.disabled = true;
+    downloadSvgBtn.disabled = true;
+    filenameLabel.textContent = file.name;
+
+    const videoEl = document.createElement('video');
+    videoEl.muted = true;
+    videoEl.preload = 'metadata';
+    const url = URL.createObjectURL(file);
+
+    await new Promise(resolve => {
+      videoEl.onloadedmetadata = resolve;
+      videoEl.src = url;
+    });
+
+    if (vstate.videoEl && vstate.videoEl.src) URL.revokeObjectURL(vstate.videoEl.src);
+    vstate.videoEl = videoEl;
+    vstate.duration = videoEl.duration;
+
+    videoDurationEl.textContent = videoEl.duration.toFixed(2) + 's';
+    updateFrameCount();
+    videoSection.style.display = '';
+    emptyState.style.display = 'none';
+    allControls.forEach(el => el.disabled = false);
+
+    await seekTo(videoEl, 0);
+    loadVideoFrame(videoEl);
+  }
+
+  function updateFrameCount(){
+    if (!vstate.videoEl) return;
+    const fps = +fpsSlider.value;
+    videoFramesEl.textContent = Math.max(1, Math.floor(vstate.duration * fps));
+  }
+
+  function seekTo(videoEl, time){
+    return new Promise(resolve => {
+      let settled = false;
+      const done = () => { if (settled) return; settled = true; resolve(); };
+      videoEl.addEventListener('seeked', done, { once: true });
+      videoEl.currentTime = time;
+    });
+  }
+
+  function loadVideoFrame(videoEl){
+    const maxDim = 900;
+    const vw = videoEl.videoWidth, vh = videoEl.videoHeight;
+    const scale = Math.min(1, maxDim / Math.max(vw, vh));
+    const w = Math.max(1, Math.round(vw * scale));
+    const h = Math.max(1, Math.round(vh * scale));
+
+    sourceCanvas.width = w; sourceCanvas.height = h;
+    const sctx = sourceCanvas.getContext('2d');
+    sctx.drawImage(videoEl, 0, 0, w, h);
+    const imageData = sctx.getImageData(0, 0, w, h);
+
+    state.luma = toLuma(imageData);
+    state.w = w; state.h = h;
+
+    setMosaicRange(w, h);
+    scheduleRecompute();
+  }
+
+  // ---------- VIDEO RENDER ----------
+  async function renderVideo(){
+    if (vstate.isRendering) return;
+    vstate.isRendering = true;
+    vstate.renderedFrames = [];
+    stopPreview();
+
+    renderVideoBtn.disabled = true;
+    downloadWebmBtn.disabled = true;
+    progressWrap.style.display = 'flex';
+    progressWrap.style.flexDirection = 'column';
+    progressWrap.style.gap = '6px';
+
+    const fps = +fpsSlider.value;
+    const duration = vstate.duration;
+    const totalFrames = Math.max(1, Math.floor(duration * fps));
+    const videoEl = vstate.videoEl;
+    const { w, h } = state;
+
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = w; offCanvas.height = h;
+
+    for (let i = 0; i < totalFrames; i++){
+      await seekTo(videoEl, i / fps);
+
+      sourceCanvas.width = w; sourceCanvas.height = h;
+      sourceCanvas.getContext('2d').drawImage(videoEl, 0, 0, w, h);
+      const imageData = sourceCanvas.getContext('2d').getImageData(0, 0, w, h);
+
+      const luma = toLuma(imageData);
+      const bin = buildBinary(luma, w, h, +thresholdSlider.value, invertCheck.checked);
+
+      const cellSize = +mosaicSlider.value;
+      const { grid, gridW, gridH } = buildGrid(bin, w, h, cellSize);
+      const tiles = packTiles(grid, gridW, gridH);
+
+      const gapPx = cellSize * (+gapSlider.value / 100);
+      const circleRatio = +circleSlider.value / 100;
+      const bgColor = transparentCheck.checked ? '#000000' : bgColorInput.value;
+
+      renderTilesToCanvas(offCanvas, tiles, cellSize, gapPx, circleRatio,
+        tileColorInput.value, circleColorInput.value, bgColor, gridW, gridH);
+
+      fitDraw(sourceCanvas, thumbSource);
+      fitDraw(offCanvas, thumbFinal);
+
+      vstate.renderedFrames.push({
+        tiles,
+        gridW,
+        gridH,
+        cellSize,
+        preview: offCanvas.toDataURL('image/jpeg', 0.9),
+      });
+
+      progressFill.style.width = ((i + 1) / totalFrames * 100) + '%';
+      progressLabel.textContent = 'FRAME ' + (i + 1) + ' / ' + totalFrames;
+
+      await new Promise(r => setTimeout(r, 0));
+    }
+
+    vstate.isRendering = false;
+    renderVideoBtn.disabled = false;
+    progressWrap.style.display = 'none';
+    downloadWebmBtn.disabled = false;
+
+    startPreview();
+  }
+
+  // ---------- VIDEO PREVIEW ----------
+  function stopPreview(){
+    if (vstate.previewRAF){ cancelAnimationFrame(vstate.previewRAF); vstate.previewRAF = null; }
+  }
+
+  function startPreview(){
+    const frames = vstate.renderedFrames;
+    if (!frames.length) return;
+
+    const images = frames.map(f => { const img = new Image(); img.src = f.preview; return img; });
+    const fps = +fpsSlider.value;
+    let frameIdx = 0, last = 0;
+
+    function tick(ts){
+      if (ts - last >= 1000 / fps){
+        const img = images[frameIdx];
+        if (img.complete && img.naturalWidth){
+          finalCanvas.width = img.naturalWidth;
+          finalCanvas.height = img.naturalHeight;
+          finalCanvas.getContext('2d').drawImage(img, 0, 0);
+        }
+        frameIdx = (frameIdx + 1) % frames.length;
+        last = ts;
+      }
+      vstate.previewRAF = requestAnimationFrame(tick);
+    }
+    vstate.previewRAF = requestAnimationFrame(tick);
+  }
+
+  // ---------- WEBM EXPORT ----------
+  async function exportWebm(){
+    const frames = vstate.renderedFrames;
+    if (!frames.length) return;
+
+    downloadWebmBtn.disabled = true;
+    const fps = +fpsSlider.value;
+    const scale = getExportScale();
+
+    // Phase 1: re-render each frame at export resolution
+    const bitmaps = [];
+    for (let i = 0; i < frames.length; i++){
+      const { tiles, gridW, gridH, cellSize } = frames[i];
+      const expCell = cellSize * scale;
+      const expGap = expCell * (+gapSlider.value / 100);
+      const expCircle = +circleSlider.value / 100;
+      const bgColor = transparentCheck.checked ? '#000000' : bgColorInput.value;
+      const fc = document.createElement('canvas');
+      renderTilesToCanvas(fc, tiles, expCell, expGap, expCircle,
+        tileColorInput.value, circleColorInput.value, bgColor, gridW, gridH);
+      bitmaps.push(await createImageBitmap(fc));
+      downloadWebmBtn.textContent = 'RENDERING ' + (i + 1) + '/' + frames.length;
+      await new Promise(r => setTimeout(r, 0));
+    }
+
+    // Phase 2: play bitmaps into a recording canvas at the target FPS
+    downloadWebmBtn.textContent = 'ENCODING…';
+    const W = bitmaps[0].width, H = bitmaps[0].height;
+    const recCanvas = document.createElement('canvas');
+    recCanvas.width = W; recCanvas.height = H;
+    const ctx = recCanvas.getContext('2d');
+
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4']
+      .find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
+
+    const stream = recCanvas.captureStream(fps);
+    const chunks = [];
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 12_000_000 });
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    const stopped = new Promise(resolve => { recorder.onstop = resolve; });
+
+    recorder.start();
+    for (const bmp of bitmaps){
+      ctx.drawImage(bmp, 0, 0);
+      await new Promise(r => setTimeout(r, 1000 / fps));
+    }
+    recorder.stop();
+    await stopped;
+
+    bitmaps.forEach(b => b.close());
+
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'tile-video.' + ext; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+    downloadWebmBtn.disabled = false;
+    downloadWebmBtn.textContent = 'WEBM';
+  }
+
+  // ---------- FILE DISPATCH ----------
+  function handleFile(file){
+    if (!file) return;
+    if (file.type.startsWith('video/')) handleVideoFile(file);
+    else if (file.type.startsWith('image/')) handleImageFile(file);
+  }
+
+  // ---------- WIRING ----------
+  dropzone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+  [dropzone, canvasWrap].forEach(zone => {
+    ['dragenter','dragover'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+    ['dragleave','drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+    zone.addEventListener('drop', e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); });
+  });
+
+  thresholdSlider.addEventListener('input', () => { thresholdValue.textContent = thresholdSlider.value; scheduleRecompute(); });
+  invertCheck.addEventListener('change', scheduleRecompute);
+  mosaicSlider.addEventListener('input', () => { mosaicValue.textContent = mosaicSlider.value; scheduleRecompute(); });
+  circleSlider.addEventListener('input', () => { circleValue.textContent = circleSlider.value + '%'; scheduleRecompute(); });
+  gapSlider.addEventListener('input', () => { gapValue.textContent = gapSlider.value + '%'; scheduleRecompute(); });
+  tileColorInput.addEventListener('input', scheduleRecompute);
+  circleColorInput.addEventListener('input', scheduleRecompute);
+  bgColorInput.addEventListener('input', scheduleRecompute);
+  transparentCheck.addEventListener('change', () => {
+    bgColorInput.disabled = transparentCheck.checked;
+    scheduleRecompute();
+  });
+
+  resGroup.addEventListener('click', e => {
+    const btn = e.target.closest('.res-btn');
+    if (!btn) return;
+    resGroup.querySelectorAll('.res-btn').forEach(b => b.classList.toggle('active', b === btn));
+    exportTargetLong = +btn.dataset.res;
+    updateExportSizeLabel();
+  });
+
+  fpsSlider.addEventListener('input', () => { fpsValue.textContent = fpsSlider.value; updateFrameCount(); });
+  renderVideoBtn.addEventListener('click', renderVideo);
+  downloadWebmBtn.addEventListener('click', exportWebm);
+
+  downloadPngBtn.addEventListener('click', () => {
+    const scale = getExportScale();
+    const expCell = state.cellSize * scale;
+    const expGap = state.gapPx * scale;
+    const expCanvas = document.createElement('canvas');
+    renderTilesToCanvas(expCanvas, state.tiles, expCell, expGap, state.circleRatio,
+      state.tileColor, state.circleColor, state.bgColor, state.gridW, state.gridH);
+    expCanvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'mosaic-tiles.png'; a.click();
+      URL.revokeObjectURL(url);
+    });
+  });
+
+  downloadSvgBtn.addEventListener('click', () => {
+    const svgStr = tilesToSVG(state.tiles, state.cellSize, state.gapPx, state.circleRatio,
+      state.tileColor, state.circleColor, state.bgColor, state.gridW, state.gridH);
+    const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'mosaic-tiles.svg'; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Disable WEBM button if MediaRecorder is unavailable
+  if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream){
+    downloadWebmBtn.disabled = true;
+    downloadWebmBtn.title = 'Not supported in this browser';
+  }
+
+})();
+</script>
+</body>
+</html>
